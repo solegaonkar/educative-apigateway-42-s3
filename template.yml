@@ -1,0 +1,134 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  DeployId:
+    Type: String
+    Default: afsf34sfdg
+  SourceCodeBucket:
+    Type: String
+    Default: afsf34sfdg
+Resources:
+  RestAPI:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      Body:
+        openapi: "3.0.1"
+        info:
+          title: "EducativeRestAPI"
+          description: "Rest API for Educative API Gateway Course"
+          version: "2022-06-06T10:08:49Z"
+        paths:
+          /{bucket}/{key}:
+            get:
+              parameters:
+                - name: "key"
+                  in: "path"
+                  required: true
+                  schema:
+                    type: "string"
+                - name: "bucket"
+                  in: "path"
+                  required: true
+                  schema:
+                    type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Empty"
+              x-amazon-apigateway-integration:
+                type: "aws"
+                credentials: !Sub "arn:aws:iam::${AWS::AccountId}:role/EducativeRole"
+                httpMethod: "GET"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:s3:path//{bucket}/{key}"
+                responses:
+                  default:
+                    statusCode: "200"
+                requestParameters:
+                  integration.request.path.key: "method.request.path.key"
+                  integration.request.path.bucket: "method.request.path.bucket"
+                passthroughBehavior: "when_no_match"
+            put:
+              parameters:
+                - name: "key"
+                  in: "path"
+                  required: true
+                  schema:
+                    type: "string"
+                - name: "bucket"
+                  in: "path"
+                  required: true
+                  schema:
+                    type: "string"
+              responses:
+                "200":
+                  description: "200 response"
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Empty"
+              x-amazon-apigateway-integration:
+                type: "aws"
+                credentials: !Sub "arn:aws:iam::${AWS::AccountId}:role/EducativeRole"
+                httpMethod: "PUT"
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:s3:path/{bucket}/{key}"
+                responses:
+                  default:
+                    statusCode: "200"
+                requestParameters:
+                  integration.request.path.key: "method.request.path.key"
+                  integration.request.path.bucket: "method.request.path.bucket"
+                passthroughBehavior: "when_no_match"
+        components:
+          schemas:
+            Empty:
+              title: "Empty Schema"
+              type: "object"
+        x-amazon-apigateway-binary-media-types:
+          - "*/*"
+      Name: EducativeRestAPI
+      Description: "Rest API for Educative API Gateway Course"
+      Mode: overwrite
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: EducativeRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+                - apigateway.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: logs
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:*
+                Resource: arn:aws:logs:*:*:*
+        - PolicyName: s3
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                Resource: "arn:aws:s3:::*"
+  APIDeployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId:
+        Ref: RestAPI
+      StageName: v1
